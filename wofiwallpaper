@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# Directory containing the wallpapers
+BASE_DIR=~/Pictures/Wallpapers
+
+# Function to determine prefix based on file type
+get_prefix() {
+    local item_path="$1"
+
+    if [ -d "$item_path" ]; then
+        echo "📁"
+    elif [ -f "$item_path" ]; then
+        echo "🎨"
+    fi
+}
+
+# Recursive function to prompt user using wofi
+prompt_selection() {
+    local current_dir="$1"
+
+    # List all items in the current directory with prefixes
+    local items=$(find "$current_dir" -maxdepth 1 -mindepth 1 | sort | while read item; do
+        echo "$(get_prefix "$item") $(basename "$item")"
+    done)
+
+    # Let user select an item using wofi in dmenu mode
+    local selected_item=$(echo "$items" | wofi --conf ~/.config/wofi/walsetconfig)
+
+    # Extract the actual name (remove prefix)
+    local item_name=$(echo "$selected_item" | awk '{print $2}')
+
+    # Exit if nothing is selected
+    [ -z "$item_name" ] && return
+
+    local full_path="$current_dir"/"$item_name"
+
+    # Check if the selected item is a directory or a file
+    if [ -d "$full_path" ]; then
+        # Recursively call the function if it's a directory
+        prompt_selection "$full_path"
+    elif [ -f "$full_path" ]; then
+        # Set the wallpaper if it's a file
+        walset "$full_path"
+    fi
+}
+
+# Start the selection from the base directory
+prompt_selection "$BASE_DIR"
